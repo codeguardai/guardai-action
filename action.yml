@@ -1,0 +1,76 @@
+name: "GuardAI Action"
+description: "A GitHub Action for running GuardAI in GitHub Workflows"
+
+inputs:
+  version:
+    description: "Version of GuardAI to install"
+    required: false
+    default: "latest"
+  provider:
+    description: "AI provider"
+    required: true
+  model:
+    description: "AI model to use"
+    required: false
+  directory:
+    description: "Directory to scan"
+    required: false
+    default: "."
+  changes_only:
+    description: "Scan only changed files"
+    required: false
+    default: "false"
+  repo:
+    description: "GitHub repository"
+    required: false
+  pr_number:
+    description: "Pull request number"
+    required: false
+  github_token:
+    description: "GitHub API token"
+    required: false
+  host:
+    description: "Custom AI server host"
+    required: false
+  port:
+    description: "Custom AI server port"
+    required: false
+  token:
+    description: "Token for authenticating with the custom AI server"
+    required: false
+  endpoint:
+    description: "API endpoint for the custom server"
+    required: false
+    default: "/api/v1/scan"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install AI Code Scanner
+      shell: bash
+      run: |
+        if [ "${{ inputs.version }}" = "latest" ]; then
+          pip install guardai
+        else
+          pip install guardai==${{ inputs.version }}
+        fi
+
+    - name: Run AI Code Scanner
+      id: scan
+      shell: bash
+      run: |
+        scan_output=$(guardai \
+          --provider ${{ inputs.provider }} \
+          --directory ${{ inputs.directory }} \
+          --model ${{ inputs.model }} \
+          --changes_only ${{ inputs.changes_only }} \
+          --repo ${{ inputs.repo }} \
+          --pr_number ${{ inputs.pr_number }} \
+          --github_token ${{ inputs.github_token }} \
+          --host ${{ inputs.host }} \
+          --port ${{ inputs.port }} \
+          --token ${{ inputs.token }} \
+          --endpoint ${{ inputs.endpoint }} 2>&1)
+
+        echo "$scan_output"
+        echo "::set-output name=scan_output::$scan_output"
