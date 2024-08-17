@@ -15,8 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run GuardAI Action on Linux
-        if: ${{ startsWith(runner.os, 'Linux') }}
+      - name: Run GuardAI Action
         id: guardai_test
         uses: ./
         env:
@@ -24,24 +23,18 @@ jobs:
         with:
           provider: "openai"
           directory: "."
+          output_file: "guardai_output.txt"
 
-      - name: Check GuardAI Output on Linux
-        if: ${{ startsWith(runner.os, 'Linux') }}
+      - name: Check GuardAI Output
+        shell: bash
         run: |
-          if [ -z "${{ steps.guardai_test.outputs.scan_output }}" ]; then
+          guardai_output_file="guardai_output.txt"
+
+          # Check if the output file exists and is not empty
+          if [[ ! -s "$guardai_output_file" ]]; then
             echo "No output detected from GuardAI action."
             exit 1
           fi
-          echo "GuardAI action produced output successfully."
-          echo "${{ steps.guardai_test.outputs.scan_output }}"
 
-      - name: Check GuardAI Output on Windows
-        if: ${{ startsWith(runner.os, 'Windows') }}
-        shell: pwsh
-        run: |
-          if (-not ${{ steps.guardai_test.outputs.scan_output }}) {
-            Write-Host "No output detected from GuardAI action."
-            exit 1
-          }
-          Write-Host "GuardAI action produced output successfully."
-          Write-Host "${{ steps.guardai_test.outputs.scan_output }}"
+          echo "GuardAI action produced output successfully."
+          cat "$guardai_output_file"
