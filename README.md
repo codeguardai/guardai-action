@@ -20,16 +20,11 @@ A GitHub Action for running GuardAI in GitHub Workflows
 | `port`         | <p>Custom AI server port</p>                              | `false`  | `""`           |
 | `token`        | <p>Token for authenticating with the custom AI server</p> | `false`  | `""`           |
 | `endpoint`     | <p>API endpoint for the custom server</p>                 | `false`  | `/api/v1/scan` |
+| `output_file`  | <p>Optional output file to store GuardAI results</p>      | `false`  | `""`           |
 
 <!-- action-docs-inputs source="action.yml" -->
 
 <!-- action-docs-outputs source="action.yml" -->
-
-## Outputs
-
-| name          | description                         |
-| ------------- | ----------------------------------- |
-| `scan_output` | <p>Output from the GuardAI scan</p> |
 
 <!-- action-docs-outputs source="action.yml" -->
 
@@ -128,6 +123,12 @@ This action is a `composite` action.
     #
     # Required: false
     # Default: /api/v1/scan
+
+    output_file:
+    # Optional output file to store GuardAI results
+    #
+    # Required: false
+    # Default: ""
 ```
 
 <!-- action-docs-usage source="action.yml" project="codeguardai/guardai-action" version="0.1.0" -->
