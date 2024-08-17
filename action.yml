@@ -1,5 +1,9 @@
 name: "GuardAI Action"
 description: "A GitHub Action for running GuardAI in GitHub Workflows"
+author: "Best Olunusi"
+branding:
+  icon: "box"
+  color: "white"
 
 inputs:
   version:
@@ -43,34 +47,70 @@ inputs:
     required: false
     default: "/api/v1/scan"
 
+outputs:
+  scan_output:
+    description: "Output from the GuardAI scan"
+    value: ${{ steps.scan.outputs.scan_output }}
+
 runs:
   using: "composite"
   steps:
-    - name: Install AI Code Scanner
-      shell: bash
-      run: |
-        if [ "${{ inputs.version }}" = "latest" ]; then
-          pip install guardai
-        else
-          pip install guardai==${{ inputs.version }}
-        fi
+    - name: Install guardai
+      uses: codeguardai/setup-guardai-action@v0.1.0
+      with:
+        version: ${{ inputs.version }}
 
-    - name: Run AI Code Scanner
+    - name: Run guardai on Linux/macOS
+      if: ${{ startsWith(runner.os, 'Linux') }}
       id: scan
       shell: bash
       run: |
-        scan_output=$(guardai \
-          --provider ${{ inputs.provider }} \
-          --directory ${{ inputs.directory }} \
-          --model ${{ inputs.model }} \
-          --changes_only ${{ inputs.changes_only }} \
-          --repo ${{ inputs.repo }} \
-          --pr_number ${{ inputs.pr_number }} \
-          --github_token ${{ inputs.github_token }} \
-          --host ${{ inputs.host }} \
-          --port ${{ inputs.port }} \
-          --token ${{ inputs.token }} \
-          --endpoint ${{ inputs.endpoint }} 2>&1)
+        guardai_output_file="guardai_output.txt"
+        guardai_command="guardai"
 
-        echo "$scan_output"
-        echo "::set-output name=scan_output::$scan_output"
+        # Conditionally add each flag
+        [ -n "${{ inputs.provider }}" ] && guardai_command="$guardai_command --provider ${{ inputs.provider }}"
+        [ -n "${{ inputs.directory }}" ] && guardai_command="$guardai_command --directory ${{ inputs.directory }}"
+        [ -n "${{ inputs.model }}" ] && guardai_command="$guardai_command --model ${{ inputs.model }}"
+        [ "${{ inputs.changes_only }}" == "true" ] && guardai_command="$guardai_command --changes_only"
+        [ -n "${{ inputs.repo }}" ] && guardai_command="$guardai_command --repo ${{ inputs.repo }}"
+        [ -n "${{ inputs.pr_number }}" ] && guardai_command="$guardai_command --pr_number ${{ inputs.pr_number }}"
+        [ -n "${{ inputs.github_token }}" ] && guardai_command="$guardai_command --github_token ${{ inputs.github_token }}"
+        [ -n "${{ inputs.host }}" ] && guardai_command="$guardai_command --host ${{ inputs.host }}"
+        [ -n "${{ inputs.port }}" ] && guardai_command="$guardai_command --port ${{ inputs.port }}"
+        [ -n "${{ inputs.token }}" ] && guardai_command="$guardai_command --token ${{ inputs.token }}"
+        [ -n "${{ inputs.endpoint }}" ] && guardai_command="$guardai_command --endpoint ${{ inputs.endpoint }}"
+
+        # Run the constructed command
+        $guardai_command 1> $guardai_output_file
+
+        # Set the content of the file as output
+        echo "scan_output=$(cat $guardai_output_file)" >> $GITHUB_OUTPUT
+
+    - name: Run guardai on Windows
+      if: ${{ startsWith(runner.os, 'Windows') }}
+      id: scan
+      shell: pwsh
+      run: |
+        $guardai_output_file = "guardai_output.txt"
+        $guardai_command = "guardai"
+
+        # Conditionally add each flag
+        if ($env:inputs.provider) { $guardai_command += " --provider $env:inputs.provider" }
+        if ($env:inputs.directory) { $guardai_command += " --directory $env:inputs.directory" }
+        if ($env:inputs.model) { $guardai_command += " --model $env:inputs.model" }
+        if ($env:inputs.changes_only -eq "true") { $guardai_command += " --changes_only" }
+        if ($env:inputs.repo) { $guardai_command += " --repo $env:inputs.repo" }
+        if ($env:inputs.pr_number) { $guardai_command += " --pr_number $env:inputs.pr_number" }
+        if ($env:inputs.github_token) { $guardai_command += " --github_token $env:inputs.github_token" }
+        if ($env:inputs.host) { $guardai_command += " --host $env:inputs.host" }
+        if ($env:inputs.port) { $guardai_command += " --port $env:inputs.port" }
+        if ($env:inputs.token) { $guardai_command += " --token $env:inputs.token" }
+        if ($env:inputs.endpoint) { $guardai_command += " --endpoint $env:inputs.endpoint" }
+
+        # Run the constructed command
+        Invoke-Expression "$guardai_command" > $guardai_output_file
+
+        # Set the content of the file as output
+        Write-Output "scan_output=$(Get-Content $guardai_output_file -Raw)" >> $env:GITHUB_OUTPUT
+

@@ -1,0 +1,47 @@
+name: GuardAI Action CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test-guardai:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run GuardAI Action on Linux
+        if: ${{ startsWith(runner.os, 'Linux') }}
+        id: guardai_test
+        uses: ./
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        with:
+          provider: "openai"
+          directory: "."
+
+      - name: Check GuardAI Output on Linux
+        if: ${{ startsWith(runner.os, 'Linux') }}
+        run: |
+          if [ -z "${{ steps.guardai_test.outputs.scan_output }}" ]; then
+            echo "No output detected from GuardAI action."
+            exit 1
+          fi
+          echo "GuardAI action produced output successfully."
+          echo "${{ steps.guardai_test.outputs.scan_output }}"
+
+      - name: Check GuardAI Output on Windows
+        if: ${{ startsWith(runner.os, 'Windows') }}
+        shell: pwsh
+        run: |
+          if (-not ${{ steps.guardai_test.outputs.scan_output }}) {
+            Write-Host "No output detected from GuardAI action."
+            exit 1
+          }
+          Write-Host "GuardAI action produced output successfully."
+          Write-Host "${{ steps.guardai_test.outputs.scan_output }}"
